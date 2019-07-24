@@ -923,8 +923,30 @@ namespace O2Micro.Cobra.SP8G2
             switch ((ElementDefine.COMMAND)msg.sub_task)
             {
 
+                case ElementDefine.COMMAND.FROZEN_BIT_CHECK_PC:
+                    ret = PowerOn();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    ret = FrozenBitCheck();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    ret = PowerOff();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    break;
                 case ElementDefine.COMMAND.FROZEN_BIT_CHECK:
                     ret = FrozenBitCheck();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    break;
+                case ElementDefine.COMMAND.DIRTY_CHIP_CHECK_PC:
+                    ret = PowerOn();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    ret = DirtyChipCheck();
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                        return ret;
+                    ret = PowerOff();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
                     break;
@@ -935,7 +957,7 @@ namespace O2Micro.Cobra.SP8G2
                         return ret;
                     break;
 
-                case ElementDefine.COMMAND.DOWNLOAD_WITH_POWER_CONTROL:
+                case ElementDefine.COMMAND.DOWNLOAD_PC:
                     {
                         ret = DownloadWithPowerControl(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
@@ -946,7 +968,7 @@ namespace O2Micro.Cobra.SP8G2
                         break;
                     }
 
-                case ElementDefine.COMMAND.DOWNLOAD_WITHOUT_POWER_CONTROL:
+                case ElementDefine.COMMAND.DOWNLOAD:
                     {
                         ret = DownloadWithoutPowerControl(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
@@ -954,6 +976,19 @@ namespace O2Micro.Cobra.SP8G2
 #if debug
                         Thread.Sleep(1000);
 #endif
+                        break;
+                    }
+                case ElementDefine.COMMAND.READ_BACK_CHECK_PC:
+                    {
+                        ret = PowerOn();
+                        if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                            return ret;
+                        ret = ReadBackCheck();
+                        if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                            return ret;
+                        ret = PowerOff();
+                        if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                            return ret;
                         break;
                     }
                 case ElementDefine.COMMAND.READ_BACK_CHECK:
@@ -1154,6 +1189,7 @@ namespace O2Micro.Cobra.SP8G2
                 EFUSEUSRbuf[4] = parent.m_OpRegImg[address].val;
 #endif
                 ret = WriteByte(address, (byte)parent.m_OpRegImg[address].val);
+                //Thread.Sleep(1000);
                 parent.m_OpRegImg[address].err = ret;
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
@@ -1196,12 +1232,22 @@ namespace O2Micro.Cobra.SP8G2
 #else
                 EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
 #endif
-                ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
-                parent.m_OpRegImg[(byte)(badd)].err = ret;
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                byte tmp=0;
+                byte cnt = 0;
+                do
                 {
-                    return ret;
+                    ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
+                    //Thread.Sleep(5000);
+                    parent.m_OpRegImg[(byte)(badd)].err = ret;
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                    {
+                        return ret;
+                    }
+
+                    ret = ReadByte((byte)(badd + offset), ref tmp);
+                    cnt++;
                 }
+                while ((tmp != (byte)parent.m_OpRegImg[badd].val) && cnt<15);
             }
 
             ret = PowerOff();

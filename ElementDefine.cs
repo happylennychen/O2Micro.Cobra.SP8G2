@@ -93,7 +93,7 @@ namespace O2Micro.Cobra.SP8G2
         // EFUSE Control Flags
         internal const byte ALLOW_WR_FLAG = 0x80;
         internal const byte EFUSE_FROZEN_FLAG = 0x80;
-        internal const UInt16 EF_TOTAL_PARAMS = 20;
+        internal const UInt16 EF_TOTAL_PARAMS = 15; //Removed 5 from 20 as AE requested
         #endregion
 
 
@@ -129,13 +129,15 @@ namespace O2Micro.Cobra.SP8G2
         internal enum COMMAND : ushort
         {
             //TESTCTRL_SLOP_TRIM = 2,
-            FROZEN_BIT_CHECK = 9,
-            DIRTY_CHIP_CHECK = 10,
-            DOWNLOAD_WITH_POWER_CONTROL = 11,
-            DOWNLOAD_WITHOUT_POWER_CONTROL = 12,
-            READ_BACK_CHECK = 13,
-            //ATE_CRC_CHECK = 14,
-            GET_EFUSE_HEX_DATA = 15
+            FROZEN_BIT_CHECK_PC = 9,
+            FROZEN_BIT_CHECK = 10,
+            DIRTY_CHIP_CHECK_PC = 11,
+            DIRTY_CHIP_CHECK = 12,
+            DOWNLOAD_PC = 13,
+            DOWNLOAD = 14,
+            READ_BACK_CHECK_PC = 15,
+            READ_BACK_CHECK = 16,
+            GET_EFUSE_HEX_DATA = 17
         }
 
     }
