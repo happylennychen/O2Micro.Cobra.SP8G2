@@ -14,6 +14,7 @@ using System.Threading;
 using System.ComponentModel;
 using O2Micro.Cobra.Communication;
 using O2Micro.Cobra.Common;
+using System.Diagnostics;
 //using O2Micro.Cobra.EM;
 
 namespace O2Micro.Cobra.SP8G2
@@ -1232,6 +1233,8 @@ namespace O2Micro.Cobra.SP8G2
 #else
                 EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
 #endif
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
                 byte tmp=0;
                 byte cnt = 0;
                 do
@@ -1246,8 +1249,13 @@ namespace O2Micro.Cobra.SP8G2
 
                     ret = ReadByte((byte)(badd + offset), ref tmp);
                     cnt++;
+                    FolderMap.WriteFile("cnt = "+cnt.ToString());
                 }
                 while ((tmp != (byte)parent.m_OpRegImg[badd].val) && cnt<15);
+                string str = "Download Duration: " + Math.Round(sw.Elapsed.TotalMilliseconds, 0).ToString() + "mS\t";
+                sw.Stop();
+                str += "Download Count: " + cnt.ToString();
+                FolderMap.WriteFile(str);
             }
 
             ret = PowerOff();
@@ -1374,6 +1382,7 @@ namespace O2Micro.Cobra.SP8G2
                 ret = ReadByte((byte)(badd + 4*WritingBank1Or2), ref pval);
                 if (pval != EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET])
                 {
+                    FolderMap.WriteFile("Read Back: 0x" + badd + (4 * WritingBank1Or2).ToString("X2") + " = 0x" + pval.ToString("X2"));
                     return LibErrorCode.IDS_ERR_DEM_BUF_CHECK_FAIL;
                 }
             }
