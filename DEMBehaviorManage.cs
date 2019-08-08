@@ -1215,6 +1215,8 @@ namespace O2Micro.Cobra.SP8G2
                 msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_WARNING;
                 WritingBank1Or2 = 1;
             }
+            //Stopwatch sw = new Stopwatch();
+            //sw.Start();
 
             for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
             {
@@ -1233,31 +1235,23 @@ namespace O2Micro.Cobra.SP8G2
 #else
                 EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
 #endif
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
-                byte tmp=0;
-                byte cnt = 0;
-                do
-                {
                     ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
-                    //Thread.Sleep(5000);
                     parent.m_OpRegImg[(byte)(badd)].err = ret;
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                     {
                         return ret;
                     }
-
-                    ret = ReadByte((byte)(badd + offset), ref tmp);
-                    cnt++;
-                    FolderMap.WriteFile("cnt = "+cnt.ToString());
-                }
-                while ((tmp != (byte)parent.m_OpRegImg[badd].val) && cnt<15);
-                string str = "Download Duration: " + Math.Round(sw.Elapsed.TotalMilliseconds, 0).ToString() + "mS\t";
-                sw.Stop();
-                str += "Download Count: " + cnt.ToString();
-                FolderMap.WriteFile(str);
+                    byte tmp = 0;
+                    ret = ReadByte((byte)(badd + offset), ref tmp);     //Issue 1724 workaround
+                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                    {
+                        return ret;
+                    }
             }
 
+            //string str = "Download All 4 registers Duration: " + Math.Round(sw.Elapsed.TotalMilliseconds, 0).ToString() + "mS\t";
+            //sw.Stop();
+            //FolderMap.WriteFile(str);
             ret = PowerOff();
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 return ret;
@@ -1382,14 +1376,17 @@ namespace O2Micro.Cobra.SP8G2
                 ret = ReadByte((byte)(badd + 4*WritingBank1Or2), ref pval);
                 if (pval != EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET])
                 {
-                    FolderMap.WriteFile("Read Back: 0x" + badd + (4 * WritingBank1Or2).ToString("X2") + " = 0x" + pval.ToString("X2"));
+                    FolderMap.WriteFile("Read back check, address: 0x" + (badd + 4 * WritingBank1Or2).ToString("X2") + "\torigi value: 0x" + EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET].ToString("X2") + "\tread value: 0x" + pval.ToString("X2"));
                     return LibErrorCode.IDS_ERR_DEM_BUF_CHECK_FAIL;
                 }
             }
-            ret = ReadByte((byte)(0x16), ref pval);
-            if (pval != EFUSEUSRbuf[4])
+            if (cfgFRZ == true)
             {
-                return LibErrorCode.IDS_ERR_DEM_BUF_CHECK_FAIL;
+                ret = ReadByte((byte)(0x16), ref pval);
+                if (pval != EFUSEUSRbuf[4])
+                {
+                    return LibErrorCode.IDS_ERR_DEM_BUF_CHECK_FAIL;
+                }
             }
             return ret;
 #endif
