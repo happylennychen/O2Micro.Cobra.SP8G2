@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<Root usage="ExtensionDescriptor" chip="SP8G2" chiptype="5708" bustype ="I2C" libname ="O2Micro.Cobra.SP8G2" ProjectCode="OCESP8G2" AppVersion="2.00.03" AMTEnable = "false" OCEVersion="1.0.1.0">
+<Root usage="ExtensionDescriptor" chip="OZ2608" chiptype="5708" bustype ="I2C" libname ="O2Micro.Cobra.OZ2608" ProjectCode="OCESP8G2" AppVersion="2.00.03" AMTEnable = "false" OCEVersion="1.0.2.0">
   <Part Name="DBConfig">
     <ChipName>SP8G2</ChipName>
     <ChipVersion>A0</ChipVersion>
     <UserType>X</UserType>
-    <Date>20190731</Date>
+    <Date>20190909</Date>
     <HasCom>true</HasCom>
     <HasAMT>true</HasAMT>
   </Part>
