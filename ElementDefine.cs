@@ -128,7 +128,6 @@ namespace O2Micro.Cobra.SP8G2
 
         internal enum COMMAND : ushort
         {
-            //TESTCTRL_SLOP_TRIM = 2,
             FROZEN_BIT_CHECK_PC = 9,
             FROZEN_BIT_CHECK = 10,
             DIRTY_CHIP_CHECK_PC = 11,
@@ -137,7 +136,8 @@ namespace O2Micro.Cobra.SP8G2
             DOWNLOAD = 14,
             READ_BACK_CHECK_PC = 15,
             READ_BACK_CHECK = 16,
-            GET_EFUSE_HEX_DATA = 17
+            //GET_EFUSE_HEX_DATA = 17,  //不再使用此命令，与kall系列统一
+            SAVE_EFUSE_HEX = 18
         }
 
     }

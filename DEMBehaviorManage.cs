@@ -14,7 +14,7 @@ using System.Threading;
 using System.ComponentModel;
 using O2Micro.Cobra.Communication;
 using O2Micro.Cobra.Common;
-using System.Diagnostics;
+using System.IO;
 //using O2Micro.Cobra.EM;
 
 namespace O2Micro.Cobra.SP8G2
@@ -82,7 +82,7 @@ namespace O2Micro.Cobra.SP8G2
             }
             return ret;
         }
-        
+
         protected UInt32 PowerOn()
         {
             UInt32 ret = 0;
@@ -252,7 +252,7 @@ namespace O2Micro.Cobra.SP8G2
         {
             UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
             byte buf = 0;
-            ret = OnReadByte(ElementDefine.WORKMODE_OFFSET,ref buf);
+            ret = OnReadByte(ElementDefine.WORKMODE_OFFSET, ref buf);
             buf &= 0x03;
             wkm = (ElementDefine.WORK_MODE)buf;
             return ret;
@@ -314,7 +314,7 @@ namespace O2Micro.Cobra.SP8G2
             ret = OnWriteByte(ElementDefine.MAPPINGDISABLE_OFFSET, buf);
             return ret;
         }
-		
+
         private UInt32 OnPowerOn()
         {
             byte[] yDataIn = { 0x51 };
@@ -333,7 +333,7 @@ namespace O2Micro.Cobra.SP8G2
             }
             return ElementDefine.IDS_ERR_DEM_POWERON_FAILED;
         }
-		
+
         private UInt32 OnPowerOff()
         {
             byte[] yDataIn = { 0x52 };
@@ -534,8 +534,8 @@ namespace O2Micro.Cobra.SP8G2
             {
                 msg.gm.message = "Please remove 7.2V power supply from Tref pin.";
                 msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_SELECT;
-                if (!msg.controlmsg.bcancel) return LibErrorCode.IDS_ERR_DEM_USER_QUIT;                
-				ret = SetWorkMode(ElementDefine.WORK_MODE.NORMAL);
+                if (!msg.controlmsg.bcancel) return LibErrorCode.IDS_ERR_DEM_USER_QUIT;
+                ret = SetWorkMode(ElementDefine.WORK_MODE.NORMAL);
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                     return ret;
             }
@@ -754,7 +754,7 @@ namespace O2Micro.Cobra.SP8G2
                 else if (operatingbank == 2)
                     parent.m_OpRegImg[0x1b].val |= 0x80;    //m_OpRegImg 0x1c~0x1f are not used
 
-                if(isConfigEmpty)
+                if (isConfigEmpty)
                     parent.m_OpRegImg[0x16].val |= 0x80;
 
                 #region Write
@@ -876,7 +876,11 @@ namespace O2Micro.Cobra.SP8G2
                 {
                     return LibErrorCode.IDS_ERR_SUCCESSFUL;
                 }
-                else if (!msg.funName.Equals("Read"))    //Issue1369
+                else if (msg.funName.Equals("Verify") || msg.funName.Equals("Read"))
+                {
+                    ;   //do nothing
+                }
+                else    //Issue1369
                 {
                     return LibErrorCode.IDS_ERR_SUCCESSFUL;
                 }
@@ -917,6 +921,37 @@ namespace O2Micro.Cobra.SP8G2
 
             return ret;
         }
+        private UInt32 ConvertPhysicalToHexClean(ref TASKMessage msg)
+        {
+            Parameter param = null;
+            UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
+
+            List<Parameter> ParamList = new List<Parameter>();
+
+            ParamContainer demparameterlist = msg.task_parameterlist;
+            if (demparameterlist == null) return ret;
+
+            foreach (Parameter p in demparameterlist.parameterlist)
+            {
+                if ((p.guid & ElementDefine.SectionMask) == ElementDefine.VirtualElement)    //略过虚拟参数
+                    continue;
+                if (p == null) break;
+                ParamList.Add(p);
+            }
+
+            if (ParamList.Count != 0)
+            {
+                for (int i = 0; i < ParamList.Count; i++)
+                {
+                    param = (Parameter)ParamList[i];
+                    if (param == null) continue;
+
+                    m_parent.Physical2Hex(ref param);
+                }
+            }
+
+            return ret;
+        }
 
         public UInt32 Command(ref TASKMessage msg)
         {
@@ -928,25 +963,31 @@ namespace O2Micro.Cobra.SP8G2
                     ret = PowerOn();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
+
                     ret = FrozenBitCheck();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
+
                     ret = PowerOff();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
                     break;
+
                 case ElementDefine.COMMAND.FROZEN_BIT_CHECK:
                     ret = FrozenBitCheck();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
                     break;
+
                 case ElementDefine.COMMAND.DIRTY_CHIP_CHECK_PC:
                     ret = PowerOn();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
+
                     ret = DirtyChipCheck();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
+
                     ret = PowerOff();
                     if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                         return ret;
@@ -984,9 +1025,11 @@ namespace O2Micro.Cobra.SP8G2
                         ret = PowerOn();
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
+
                         ret = ReadBackCheck();
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
+
                         ret = PowerOff();
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
@@ -1006,19 +1049,37 @@ namespace O2Micro.Cobra.SP8G2
                             return ret;
                         break;
                     }*/
-                case ElementDefine.COMMAND.GET_EFUSE_HEX_DATA:
+                case ElementDefine.COMMAND.SAVE_EFUSE_HEX:
                     {
                         InitEfuseData();
-                        ret = ConvertPhysicalToHex(ref msg);
+                        ret = ConvertPhysicalToHexClean(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
                         PrepareHexData();
                         ret = GetEfuseHexData(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
+                        FileStream hexfile = new FileStream(msg.sub_task_json, FileMode.Create);
+                        StreamWriter hexsw = new StreamWriter(hexfile);
+                        hexsw.Write(msg.sm.efusehexdata);
+                        hexsw.Close();
+                        hexfile.Close();
+
                         ret = GetEfuseBinData(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
+
+                        string binfilename = Path.Combine(Path.GetDirectoryName(msg.sub_task_json),
+                            Path.GetFileNameWithoutExtension(msg.sub_task_json) + ".bin");
+
+                        Encoding ec = Encoding.UTF8;
+                        using (BinaryWriter bw = new BinaryWriter(File.Open(binfilename, FileMode.Create), ec))
+                        {
+                            foreach (var b in msg.sm.efusebindata)
+                                bw.Write(b);
+
+                            bw.Close();
+                        }
                         break;
                     }
             }
@@ -1190,7 +1251,6 @@ namespace O2Micro.Cobra.SP8G2
                 EFUSEUSRbuf[4] = parent.m_OpRegImg[address].val;
 #endif
                 ret = WriteByte(address, (byte)parent.m_OpRegImg[address].val);
-                //Thread.Sleep(1000);
                 parent.m_OpRegImg[address].err = ret;
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
@@ -1215,8 +1275,6 @@ namespace O2Micro.Cobra.SP8G2
                 msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_WARNING;
                 WritingBank1Or2 = 1;
             }
-            //Stopwatch sw = new Stopwatch();
-            //sw.Start();
 
             for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
             {
@@ -1235,23 +1293,20 @@ namespace O2Micro.Cobra.SP8G2
 #else
                 EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
 #endif
-                    ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
-                    parent.m_OpRegImg[(byte)(badd)].err = ret;
-                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                    {
-                        return ret;
-                    }
-                    byte tmp = 0;
-                    ret = ReadByte((byte)(badd + offset), ref tmp);     //Issue 1724 workaround
-                    if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                    {
-                        return ret;
-                    }
+                ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
+                parent.m_OpRegImg[(byte)(badd)].err = ret;
+                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                {
+                    return ret;
+                }
+                byte tmp = 0;
+                ret = ReadByte((byte)(badd + offset), ref tmp);     //Issue 1724 workaround
+                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                {
+                    return ret;
+                }
             }
 
-            //string str = "Download All 4 registers Duration: " + Math.Round(sw.Elapsed.TotalMilliseconds, 0).ToString() + "mS\t";
-            //sw.Stop();
-            //FolderMap.WriteFile(str);
             ret = PowerOff();
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 return ret;
@@ -1310,7 +1365,7 @@ namespace O2Micro.Cobra.SP8G2
                     return ret;
                 }
             }
-            
+
             if (bank1FRZ == false)
             {
                 //System.Windows.Forms.MessageBox.Show("Writing bank1.");
@@ -1346,7 +1401,7 @@ namespace O2Micro.Cobra.SP8G2
 #else
                 EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
 #endif
-                ret = WriteByte((byte)(badd+offset), (byte)parent.m_OpRegImg[badd].val);
+                ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
                 parent.m_OpRegImg[(byte)(badd)].err = ret;
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
@@ -1373,7 +1428,7 @@ namespace O2Micro.Cobra.SP8G2
             byte pval = 0;
             for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
             {
-                ret = ReadByte((byte)(badd + 4*WritingBank1Or2), ref pval);
+                ret = ReadByte((byte)(badd + 4 * WritingBank1Or2), ref pval);
                 if (pval != EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET])
                 {
                     FolderMap.WriteFile("Read back check, address: 0x" + (badd + 4 * WritingBank1Or2).ToString("X2") + "\torigi value: 0x" + EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET].ToString("X2") + "\tread value: 0x" + pval.ToString("X2"));
@@ -1445,7 +1500,7 @@ namespace O2Micro.Cobra.SP8G2
         public UInt32 GetDeviceInfor(ref DeviceInfor deviceinfor)
         {
             UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-            byte pval1=0,pval2 = 0;
+            byte pval1 = 0, pval2 = 0;
             ret = ReadByte(0x00, ref pval1);
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL) return ret;
             ret = ReadByte(0x01, ref pval2);
@@ -1455,7 +1510,7 @@ namespace O2Micro.Cobra.SP8G2
                 return LibErrorCode.IDS_ERR_DEM_BETWEEN_SELECT_BOARD;
 
             deviceinfor.status = 0;
-            deviceinfor.type = pval1<<8|pval2;
+            deviceinfor.type = pval1 << 8 | pval2;
 
             return ret;
         }
