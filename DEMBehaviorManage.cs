@@ -578,7 +578,7 @@ namespace O2Micro.Cobra.SP8G2
             }
             return ret;
         }
-        private void SetDefaultValue()
+        private void SetDefaultValue()  //只有2608需要这样设置
         {
             parent.m_OpRegImg[0x16].val |= 0x60;
             parent.m_OpRegImg[0x18].val |= 0x13;
