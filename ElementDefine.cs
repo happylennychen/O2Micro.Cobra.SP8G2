@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using O2Micro.Cobra.Common;
+using Cobra.Common;
 
-namespace O2Micro.Cobra.SP8G2
+namespace Cobra.SP8G2
 {
     /// <summary>
     /// 数据结构定义
