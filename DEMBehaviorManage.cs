@@ -92,7 +92,7 @@ namespace Cobra.SP8G2
             }
             return ret;
         }
-        protected UInt32 PowerOff()
+        public UInt32 PowerOff()
         {
             UInt32 ret = 0;
             lock (m_lock)
@@ -1001,7 +1001,7 @@ namespace Cobra.SP8G2
 
                 case ElementDefine.COMMAND.DOWNLOAD_PC:
                     {
-                        ret = DownloadWithPowerControl(ref msg);
+                        ret = Download(ref msg, true);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
 #if debug
@@ -1012,7 +1012,7 @@ namespace Cobra.SP8G2
 
                 case ElementDefine.COMMAND.DOWNLOAD:
                     {
-                        ret = DownloadWithoutPowerControl(ref msg);
+                        ret = Download(ref msg, false);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
 #if debug
@@ -1246,21 +1246,24 @@ namespace Cobra.SP8G2
 
         private byte WritingBank1Or2 = 0;   //bank1
 
-        private UInt32 DownloadWithPowerControl(ref TASKMessage msg)
+        private UInt32 Download(ref TASKMessage msg, bool isWithPowerControl)
         {
             UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
 
-            PrepareHexData();
+            //PrepareHexData();
 
             ret = SetWorkMode(ElementDefine.WORK_MODE.PROGRAM);
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
             {
                 return ret;
             }
-
-            ret = PowerOn();
-            if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                return ret;
+            if (isWithPowerControl)
+            {
+                ret = PowerOn();
+                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                    return ret;
+            }
+            LoadEFRegImgFromEFUSEBin(msg.sm.efusebindata);
 
             byte offset = 0;
             if (cfgFRZ == true)
@@ -1273,24 +1276,7 @@ namespace Cobra.SP8G2
             else
             {
                 byte address = 0x16;
-
-#if debug
-                ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-#else
-                ret = parent.m_OpRegImg[address].err;
-#endif
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-
-#if debug
-                EFUSEUSRbuf[address] = 0;
-#else
-                EFUSEUSRbuf[4] = parent.m_OpRegImg[address].val;
-#endif
-                ret = WriteByte(address, (byte)parent.m_OpRegImg[address].val);
-                parent.m_OpRegImg[address].err = ret;
+                ret = WriteByte(address, (byte)EFUSEUSRbuf[4]);
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
                     return ret;
@@ -1317,23 +1303,9 @@ namespace Cobra.SP8G2
 
             for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
             {
-#if debug
-                ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-#else
-                ret = parent.m_OpRegImg[badd].err;
-#endif
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-
-#if debug
-                EFUSEUSRbuf[badd - ElementDefine.EF_USR_OFFSET] = 0;
-#else
-                EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
-#endif
-                ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
-                parent.m_OpRegImg[(byte)(badd)].err = ret;
+                //EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
+                ret = WriteByte((byte)(badd + offset), (byte)EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET]);
+                //parent.m_OpRegImg[(byte)(badd)].err = ret;
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
                     return ret;
@@ -1345,10 +1317,12 @@ namespace Cobra.SP8G2
                     return ret;
                 }
             }
-
-            ret = PowerOff();
-            if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                return ret;
+            if (isWithPowerControl)
+            {
+                ret = PowerOff();
+                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                    return ret;
+            }
 
             ret = SetWorkMode(ElementDefine.WORK_MODE.NORMAL);
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
@@ -1359,102 +1333,14 @@ namespace Cobra.SP8G2
             return ret;
         }
 
-        private UInt32 DownloadWithoutPowerControl(ref TASKMessage msg)
+
+        private void LoadEFRegImgFromEFUSEBin(List<byte> efusebindata)
         {
-            UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-
-            PrepareHexData();
-
-            ret = SetWorkMode(ElementDefine.WORK_MODE.PROGRAM);
-            if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-            {
-                return ret;
-            }
-            byte offset = 0;
-            if (cfgFRZ == true)
-            {
-                //System.Windows.Forms.MessageBox.Show("Config register 0x16 is frozen. Skip to program it.");
-                msg.gm.message = "Register 0x16 is frozen. Skip to program it.";
-                msg.gm.level = 0;
-                msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_WARNING;
-            }
-            else
-            {
-                byte address = 0x16;
-
-#if debug
-                ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-#else
-                ret = parent.m_OpRegImg[address].err;
-#endif
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-
-#if debug
-                EFUSEUSRbuf[address] = 0;
-#else
-                EFUSEUSRbuf[4] = parent.m_OpRegImg[address].val;
-#endif
-                ret = WriteByte(address, (byte)parent.m_OpRegImg[address].val);
-                parent.m_OpRegImg[address].err = ret;
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-            }
-
-            if (bank1FRZ == false)
-            {
-                //System.Windows.Forms.MessageBox.Show("Writing bank1.");
-                msg.gm.message = "Writing bank1.";
-                msg.gm.level = 0;
-                msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_WARNING;
-                WritingBank1Or2 = 0;
-            }
-            else if (bank2FRZ == false)
-            {
-                offset = 4;
-                //System.Windows.Forms.MessageBox.Show("Bank1 is frozen, writing bank2.");
-                msg.gm.message = "Bank1 is frozen, writing bank2.";
-                msg.gm.level = 0;
-                msg.controlreq = COMMON_CONTROL.COMMON_CONTROL_WARNING;
-                WritingBank1Or2 = 1;
-            }
-
-            for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
-            {
-#if debug
-                ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-#else
-                ret = parent.m_OpRegImg[badd].err;
-#endif
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-
-#if debug
-                EFUSEUSRbuf[badd - ElementDefine.EF_USR_OFFSET] = 0;
-#else
-                EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
-#endif
-                ret = WriteByte((byte)(badd + offset), (byte)parent.m_OpRegImg[badd].val);
-                parent.m_OpRegImg[(byte)(badd)].err = ret;
-                if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-                {
-                    return ret;
-                }
-            }
-
-            ret = SetWorkMode(ElementDefine.WORK_MODE.NORMAL);
-            if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
-            {
-                return ret;
-            }
-
-            return ret;
+            EFUSEUSRbuf[0] = efusebindata[3];
+            EFUSEUSRbuf[1] = efusebindata[5];
+            EFUSEUSRbuf[2] = efusebindata[7];
+            EFUSEUSRbuf[3] = efusebindata[9];
+            EFUSEUSRbuf[4] = efusebindata[1];
         }
 
         private UInt32 ReadBackCheck()

@@ -200,7 +200,12 @@ namespace Cobra.SP8G2
 
         public UInt32 Command(ref TASKMessage bgworker)
         {
-            return m_dem_bm.Command(ref bgworker);
+            var ret = m_dem_bm.Command(ref bgworker);
+            if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+            {
+                m_dem_bm.PowerOff();
+            }
+            return ret;
         }
 
         public UInt32 Read(ref TASKMessage bgworker)
