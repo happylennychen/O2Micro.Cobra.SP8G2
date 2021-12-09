@@ -29,7 +29,7 @@ namespace Cobra.SP8G2
             set { m_parent = value; }
         }
 
-        UInt16[] EFUSEUSRbuf = new UInt16[ElementDefine.EF_USR_BANK1_TOP - ElementDefine.EF_USR_BANK1_OFFSET + 1 + 1]; //bank1的长度，加上0x16    0x16放到EFUSEUSRbuf[4]里面去
+        byte[] EFUSEUSRbuf = new byte[ElementDefine.EF_USR_BANK1_TOP - ElementDefine.EF_USR_BANK1_OFFSET + 1 + 1]; //bank1的长度，加上0x16    0x16放到EFUSEUSRbuf[4]里面去
 
         private object m_lock = new object();
         private CCommunicateManager m_Interface = new CCommunicateManager();
@@ -1001,7 +1001,7 @@ namespace Cobra.SP8G2
 
                 case ElementDefine.COMMAND.DOWNLOAD_PC:
                     {
-                        ret = Download(ref msg, true);
+                        ret = Download(ref msg, msg.sm.efusebindata, true);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
 #if debug
@@ -1012,7 +1012,7 @@ namespace Cobra.SP8G2
 
                 case ElementDefine.COMMAND.DOWNLOAD:
                     {
-                        ret = Download(ref msg, false);
+                        ret = Download(ref msg, msg.sm.efusebindata, false);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
 #if debug
@@ -1237,20 +1237,18 @@ namespace Cobra.SP8G2
         private void PrepareHexData()
         {
             SetDefaultValue();
-            if (cfgFRZ == false)
-                parent.m_OpRegImg[ElementDefine.EF_CFG].val |= 0x80;    //Set Frozen bit in image
+            //if (cfgFRZ == false)
+            parent.m_OpRegImg[ElementDefine.EF_CFG].val |= 0x80;    //Set Frozen bit in image
 
-            if (bank1FRZ == false)
-                parent.m_OpRegImg[ElementDefine.EF_USR_BANK1_TOP].val |= 0x80;    //Set Frozen bit in image
+            //if (bank1FRZ == false)
+            parent.m_OpRegImg[ElementDefine.EF_USR_BANK1_TOP].val |= 0x80;    //Set Frozen bit in image
         }
 
         private byte WritingBank1Or2 = 0;   //bank1
 
-        private UInt32 Download(ref TASKMessage msg, bool isWithPowerControl)
+        private UInt32 Download(ref TASKMessage msg, List<byte> efusebindata, bool isWithPowerControl)
         {
             UInt32 ret = LibErrorCode.IDS_ERR_SUCCESSFUL;
-
-            //PrepareHexData();
 
             ret = SetWorkMode(ElementDefine.WORK_MODE.PROGRAM);
             if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
@@ -1303,9 +1301,7 @@ namespace Cobra.SP8G2
 
             for (byte badd = (byte)ElementDefine.EF_USR_BANK1_OFFSET; badd <= (byte)ElementDefine.EF_USR_BANK1_TOP; badd++)
             {
-                //EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET] = parent.m_OpRegImg[badd].val;
-                ret = WriteByte((byte)(badd + offset), (byte)EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET]);
-                //parent.m_OpRegImg[(byte)(badd)].err = ret;
+                ret = WriteByte((byte)(badd + offset), EFUSEUSRbuf[badd - ElementDefine.EF_USR_BANK1_OFFSET]);
                 if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                 {
                     return ret;
