@@ -582,6 +582,8 @@ namespace Cobra.SP8G2
         {
             parent.m_OpRegImg[0x16].val |= 0x60;
             parent.m_OpRegImg[0x18].val |= 0x13;
+            parent.m_OpRegImg[0x18].val &= 0xf3;
+            parent.m_OpRegImg[0x19].val |= 0x40;
         }
         public UInt32 Write(ref TASKMessage msg)
         {
