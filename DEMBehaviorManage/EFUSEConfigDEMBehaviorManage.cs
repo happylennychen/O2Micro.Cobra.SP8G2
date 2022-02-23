@@ -176,6 +176,7 @@ namespace Cobra.SP8G2
                             return ret;
                         #endregion
 
+                        SetDefaultValue();
                         if (operatingbank == 1)
                             parent.m_OpRegImg[0x1b].val |= 0x80;
                         else if (operatingbank == 2)
@@ -184,6 +185,7 @@ namespace Cobra.SP8G2
                         if (isConfigEmpty)
                             parent.m_OpRegImg[0x16].val |= 0x80;
 
+                        var beforeWriteBuffer = GetGuidAndHexValue(msg);
                         #region Write
                         foreach (byte badd in OpReglist)
                         {
@@ -225,6 +227,26 @@ namespace Cobra.SP8G2
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
 
+                        var afterReadBuffer = GetGuidAndHexValue(msg);
+
+
+                        Dictionary<string, string> Verify_Dic = new Dictionary<string, string>();
+                        foreach (Parameter param in demparameterlist.parameterlist)
+                        {
+                            if ((param.guid & ElementDefine.SectionMask) == ElementDefine.VirtualElement)    //略过虚拟参数
+                                continue;
+                            if (beforeWriteBuffer[param.guid] != afterReadBuffer[param.guid])
+                            {
+                                Verify_Dic.Add(param.guid.ToString(), string.Format("Write is 0x{0:x4},Read back is 0x{1:x4}", beforeWriteBuffer[param.guid], afterReadBuffer[param.guid]));
+                            }
+                        }
+                        if (Verify_Dic.Count != 0)
+                        {
+                            msg.sub_task_json = SharedAPI.SerializeDictionaryToJsonString(Verify_Dic);
+                            ret = LibErrorCode.IDS_ERR_SECTION_DEVICECONFSFL_PARAM_VERIFY;
+                            return ret;
+                        }
+
                         ret = ConvertHexToPhysical(ref msg);
                         if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
                             return ret;
@@ -265,6 +287,22 @@ namespace Cobra.SP8G2
                     }
             }
             return ret;
+        }
+
+        private Dictionary<uint, ushort> GetGuidAndHexValue(TASKMessage msg)
+        {
+            ParamContainer demparameterlist = msg.task_parameterlist;
+            if (demparameterlist == null) return null;
+            ushort wdata = 0;
+            Dictionary<uint, ushort> output = new Dictionary<uint, ushort>();
+            foreach (Parameter param in demparameterlist.parameterlist)
+            {
+                if ((param.guid & ElementDefine.SectionMask) == ElementDefine.VirtualElement)    //略过虚拟参数
+                    continue;
+                dem_dm.ReadFromRegImg(param, ref wdata);
+                output.Add(param.guid, wdata);
+            }
+            return output;
         }
         #region Save Hex
         private void InitEfuseData()

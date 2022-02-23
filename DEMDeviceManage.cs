@@ -13,7 +13,6 @@ namespace Cobra.SP8G2
     {
         #region Properties
 
-        private double m_EtRx;
         internal double etrx
         {
             get
@@ -21,9 +20,7 @@ namespace Cobra.SP8G2
                 Parameter param = tempParamlist.GetParameterByGuid(ElementDefine.TpETRx);
                 if (param == null) return 0.0;
                 else return param.phydata;
-                //return m_PullupR; 
             }
-            //set { m_PullupR = value; }
         }
 
         internal ParamContainer EFParamlist = null;
@@ -69,7 +66,7 @@ namespace Cobra.SP8G2
             {ElementDefine.IDS_ERR_DEM_ONE_PARAM_DISABLE,"Single parameter opeartion is not supported."},
         };
         #endregion
-
+        #region other functions
         private void InitParameters()
         {
             ParamContainer pc = m_Section_ParamlistContainer.GetParameterListByGuid(ElementDefine.OperationElement);
@@ -104,6 +101,7 @@ namespace Cobra.SP8G2
                 m_OpRegImg[i].err = LibErrorCode.IDS_ERR_BUS_DATA_PEC_ERROR;
             }
         }
+        #endregion
         #region 接口实现
         public void Init(ref BusOptions busoptions, ref ParamListContainer deviceParamlistContainer, ref ParamListContainer sflParamlistContainer)
         {
@@ -199,6 +197,8 @@ namespace Cobra.SP8G2
                 case ElementDefine.COMMAND.MP_READ_BACK_CHECK_PC:
                     {
                         ret = m_mass_production_dem_bm.Command(ref bgworker);
+                        if (ret != LibErrorCode.IDS_ERR_SUCCESSFUL)
+                            m_mass_production_dem_bm.PowerOff();
                         break;
                     }
             }

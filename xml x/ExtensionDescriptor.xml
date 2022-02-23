@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<Root usage="ExtensionDescriptor" chip="OZ2608" chiptype="5708" bustype ="I2C" libname ="Cobra.OZ2608" ProjectCode="OCESP8G2" AppVersion="2.00.03" AMTEnable = "false" OCEVersion="1.0.5.0">
+<Root usage="ExtensionDescriptor" chip="OZ2608" chiptype="5708" bustype ="I2C" libname ="Cobra.OZ2608" ProjectCode="OCESP8G2" AppVersion="2.00.03" OCEVersion="1.0.5.0" OCEName="OZ2608_A3_X_20220222">
   <Part Name="DBConfig">
     <ChipName>SP8G2</ChipName>
-    <ChipVersion>A0</ChipVersion>
+    <ChipVersion>A3</ChipVersion>
     <UserType>X</UserType>
-    <Date>20220117</Date>
+    <Date>20220222</Date>
     <HasCom>true</HasCom>
-    <HasAMT>true</HasAMT>
   </Part>
   <Part Name = "MainBtnList">
     <Button Label = "EFUSE Config" Name ="DeviceConfig"   PanelName ="Cobra.DeviceConfigurationPanel">
@@ -15,6 +14,8 @@
       </Layout>
       <SubTask>
         <SaveHex>18</SaveHex>
+        <Read>24</Read>
+        <Write>25</Write>
       </SubTask>
     </Button>
     <Button Label = "Mass Production" DBModuleName="Production"  Name = "Production" ShowVerify="False" ShowConfig="True" ShowHEX="False"  PanelName ="Cobra.ProductionPanel">
